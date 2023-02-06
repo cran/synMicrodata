@@ -1,0 +1,7 @@
+useDynLib(synMicrodata)
+import(Rcpp)
+importFrom("methods", "new")
+importFrom("methods", "is")
+importFrom("stats", "sd")
+exportPattern("^[[:alpha:]]+")
+exportClasses(Rcpp_modelobject)

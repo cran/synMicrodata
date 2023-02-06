@@ -1,0 +1,16 @@
+dc62eb42929d2cfb522cac96a1adb79b *DESCRIPTION
+be5f54ff5a0a8a83a969ec4490d86973 *NAMESPACE
+cfe74bd09087b38cd033a25fed3649bf *R/LoadModule.R
+c09cd0128c91faec8496e273a4d6bc8d *R/R_functions.R
+df614c49de54403820f0f7c87305f2a3 *man/Rcpp_modelobject-class.Rd
+996bd374a1e024c3173b7c678caaca4a *man/createModel.Rd
+5e17ec5e5178c843e3ee80f54cd2df1d *man/modelobject.Rd
+b3ba33c401a5c99f20b2893f9dbbe944 *man/multipleSyn.Rd
+74dafcb3d9944025fd20a46e3371c1fe *man/readData.Rd
+9ea46f1bec2aa1ca1d0ae1dcb107e550 *src/1_IO.cpp
+bc1f5c453570d791f729fc1571bcb0d7 *src/1_IO.h
+e9761bb2e9e1cb2cbe70b3fa11d505e1 *src/2_DataMain.cpp
+76e4c0817ea42e085824967109cdab8e *src/2_DataMain.h
+2a6f9e9e044a78154d3cfda5936d6f48 *src/Makevars
+2a6f9e9e044a78154d3cfda5936d6f48 *src/Makevars.win
+bfdc8a415b14e31ef724b423bc9311a0 *src/RcppExports.cpp
