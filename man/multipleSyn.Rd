@@ -1,44 +1,52 @@
 \name{multipleSyn}
 \alias{multipleSyn}
+\alias{print.synMicro_object}
 \title{
 Generate synthetic micro datasets
 }
 \description{
-Generate synthetic micro datasets using hierarchically coupled mixture model with 
+Generate synthetic micro datasets using a hierarchically coupled mixture model with 
   local dependence (HCMM-LC).
 }
 \usage{
 multipleSyn(data_obj, model_obj, n_burnin, m, interval_btw_Syn, show_iter = TRUE)
+
+\method{print}{synMicro_object}(x, \dots)
 }
 \arguments{
   \item{data_obj}{
-  a data object passed \code{readData}
+  data object produced by \code{readData}.
 }
   \item{model_obj}{
-  a model object passed \code{createModel}
+  model object produced by \code{createModel}.
 }
   \item{n_burnin}{
-  the size of burn-in
+  size of burn-in.
 }
   \item{m}{
-  number of synthetic micro data to be generated
+  number of synthetic micro datasets to be generated.
 }
   \item{interval_btw_Syn}{
-  the size of interval between synthetic micro datasets
+  interval between MCMC iterations for generating synthetic micro datasets.
 }
   \item{show_iter}{
-  a logical value. If \code{TRUE}, \code{multipleSyn} will print 
+  logical value. If \code{TRUE}, \code{multipleSyn} will print 
   history of \code{(r,s,k)} components on console.
 }
+  \item{x}{
+  object of class \code{synMicro_object}; a result of a call to \code{multipleSyn()}.
+  }
+  \item{...}{
+  further arguments passed to or from other methods.
+  }
 }
 
 \value{
-  \code{multipleSyn} returns a list containing the following conmponents:
-  \item{Synt_Y_list }{a list of \code{m} continuous synthetic micro dataset(s).}
-  \item{Synt_X_list }{a list of \code{m} categorical synthetic micro dataset(s).}
-  \item{r_i_cube}{a matrix of the mixture component index for continuous variables.}
-  \item{s_i_cube}{a matrix of the mixture component index for categorical variables.}
-  \item{k_i_cube}{a matrix of the mixture component index for continuous & categorical structures.}
+  \code{multipleSyn} returns a list of the following conmponents:
+  \item{synt_data}{list of \code{m} synthetic micro datasets.}
+  \item{comp_mat}{list of matrices of the mixture component indices.}
+  \item{orig_data}{original dataset.}
+  
 }
 \references{
 Murray, J. S. and Reiter, J. P. (2016). 
@@ -48,24 +56,18 @@ Murray, J. S. and Reiter, J. P. (2016).
 }
 
 \seealso{
-  \code{\link{readData}}, \code{\link{createModel}}
+  \code{\link{readData}}, \code{\link{createModel}}, \code{\link{plot.synMicro_object}}
 }
 \examples{
-## preparing to generate synthetic datasets
-dat_obj <- readData(iris[,1:4], iris[,5])
-mod_obj <- createModel(dat_obj)
+## preparing to generate synthetic datsets
+dat_obj <- readData(Y_input = iris[,1:4],
+                    X_input = data.frame(Species = iris[,5]))
+mod_obj <- createModel(dat_obj, max_R_S_K=c(30,50,20))
 
 ## generating synthetic datasets
-syn_results <- multipleSyn(dat_obj, mod_obj, 
-    n_burnin=100, m=5, interval_btw_Syn = 50, show_iter=FALSE)
+res_obj <- multipleSyn(dat_obj, mod_obj, n_burnin = 100, m = 5, 
+                       interval_btw_Syn = 50, show_iter = FALSE)
 
-head(syn_results$Synt_Y_list[[1]])
-head(syn_results$Synt_X_list[[1]])
-
-## table of mixture component index in each synthetic datasets
-apply(syn_results$r_i_cube, MARGIN=1, table)
-apply(syn_results$s_i_cube, MARGIN=1, table)
-apply(syn_results$k_i_cube, MARGIN=1, table)
-
+print(res_obj)
 }
 

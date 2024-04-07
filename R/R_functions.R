@@ -1,7 +1,7 @@
-readData <- function( Y_input, X_input, RandomSeed=99 ){
+readData <- function( Y_input, X_input, RandomSeed = 99){
   
-	set.seed(RandomSeed)
-	
+  set.seed(RandomSeed)
+  
 	if (is.null(Y_input)) stop("Y_input is NULL") 
 	NA_Y_mat = is.na( Y_input )
 	Y_input <- data.frame(Y_input)
@@ -37,7 +37,8 @@ readData <- function( Y_input, X_input, RandomSeed=99 ){
 	
 	var_names <- list(y=names(Y_input), x=names(X_input))
 	names(levels_X_input) <- names(X_input)
-	HCMM_input = list(n_sample=n_sample, p_Y=p_Y, Y_mat_std=Y_mat_std, mean_Y_input=mean_Y_input, sd_Y_input=sd_Y_input, NA_Y_mat = NA_Y_mat, p_X=p_X, D_l_vec=D_l_vec, X_mat_std=X_mat_std, levels_X_input=levels_X_input, NA_X_mat = NA_X_mat, var_names = var_names)
+	orig_data <- cbind(Y_input, X_input) #### new
+	HCMM_input = list(n_sample=n_sample, p_Y=p_Y, Y_mat_std=Y_mat_std, mean_Y_input=mean_Y_input, sd_Y_input=sd_Y_input, NA_Y_mat = NA_Y_mat, p_X=p_X, D_l_vec=D_l_vec, X_mat_std=X_mat_std, levels_X_input=levels_X_input, NA_X_mat = NA_X_mat, var_names = var_names, orig_data = orig_data)
 	
 	class(HCMM_input) <- "readData_passed"
 	return(HCMM_input)	
@@ -69,16 +70,16 @@ createModel <- function(data_obj, max_R_S_K=c(30,50,20)){ # , r_i_vec, s_i_vec, 
 
 ### multipleSyn 
 multipleSyn <- function(data_obj, model_obj, n_burnin, m, interval_btw_Syn, show_iter=TRUE){
-  
   int_print = min(200,floor(interval_btw_Syn/2)) ; 
   
   if ( !is(model_obj, "Rcpp_modelobject") ) stop("model_obj needs to be prepared by 'createModel' function") ;
   n_sample = dim(model_obj$Y_mat)[[1]] ; p_y = dim(model_obj$Y_mat)[[2]] ; p_x = dim(model_obj$X_mat)[[2]]
   r_i_cube = array(0,c(m,n_sample)) ; s_i_cube = array(0,c(m,n_sample)) ; k_i_cube = array(0,c(m,n_sample)) ;
   
-  Synt_Y_list <- replicate(m, array(0, c(n_sample, p_y)), simplify=FALSE)
-  Synt_X_list <- replicate(m, array(0, c(n_sample, p_x)), simplify=FALSE)
-  
+  Synt_data <- replicate(m, 
+                         list(Y_Synt=array(0, c(n_sample, p_y)), 
+                              X_Synt=array(0, c(n_sample, p_x))), simplify=FALSE)
+
   total_iter = n_burnin + m * interval_btw_Syn
   
   count_iter = 0
@@ -134,34 +135,51 @@ multipleSyn <- function(data_obj, model_obj, n_burnin, m, interval_btw_Syn, show
      r_i_cube[i_imp,] = model_obj$r_i_vec+1 ; s_i_cube[i_imp,] = model_obj$s_i_vec+1 ; k_i_cube[i_imp,] = model_obj$k_i_vec+1
     
     # Synthetic dataset #
-    
     model_obj$.Synthesis()
     
     for (i_sample in 1:n_sample){
-      Synt_Y_list[[i_imp]][i_sample,] = data_obj$mean_Y_input + data_obj$sd_Y_input * model_obj$Synt_Y_mat[i_sample,]
+      Synt_data[[i_imp]]$Y_Synt[i_sample,] = data_obj$mean_Y_input + data_obj$sd_Y_input * model_obj$Synt_Y_mat[i_sample,]
     }
     for(l in 1:p_x){
-      Synt_X_list[[i_imp]][,l] <- data_obj$levels_X_input[[l]][model_obj$Synt_X_mat[,l] + 1]
+      Synt_data[[i_imp]]$X_Synt[,l] <- data_obj$levels_X_input[[l]][model_obj$Synt_X_mat[,l] + 1]
     }
-    Synt_Y_list[[i_imp]] <- data.frame(Synt_Y_list[[i_imp]]); names(Synt_Y_list[[i_imp]]) <- data_obj$var_names$y
-    Synt_X_list[[i_imp]] <- data.frame(Synt_X_list[[i_imp]]); names(Synt_X_list[[i_imp]]) <- data_obj$var_names$x
+    Synt_data[[i_imp]]$Y_Synt <- data.frame(Synt_data[[i_imp]]$Y_Synt); names(Synt_data[[i_imp]]$Y_Synt) <- data_obj$var_names$y
+    Synt_data[[i_imp]]$X_Synt <- data.frame(Synt_data[[i_imp]]$X_Synt); names(Synt_data[[i_imp]]$X_Synt) <- data_obj$var_names$x
+    
     for(l in 1:p_x){
-      Synt_X_list[[i_imp]][,l] <- factor(Synt_X_list[[i_imp]][,l], levels=data_obj$levels_X_input[[l]])
+      Synt_data[[i_imp]]$X_Synt[,l] <- factor(Synt_data[[i_imp]]$X_Synt[,l], levels=data_obj$levels_X_input[[l]])
     }
-  
+    
+    Synt_data[[i_imp]] <- cbind(Synt_data[[i_imp]]$Y_Synt, Synt_data[[i_imp]]$X_Synt)
+
   } # for ( i_imp )
   
-  Synthetic_result = list(Synt_Y_list = Synt_Y_list, Synt_X_list = Synt_X_list, r_i_cube = r_i_cube , s_i_cube = s_i_cube , k_i_cube = k_i_cube) # The last two objects are newly added
+  Synthetic_result = list(synt_data = Synt_data, comp_mat = list(r_mat = r_i_cube, s_mat = s_i_cube, k_mat = k_i_cube), orig_data = data_obj$orig_data) # The last two objects are newly added
 
   message("Finished...............................")
   if (show_iter==TRUE){
     current_time = Sys.time(); message(paste("Current time,",current_time))
     message( paste0("Total time for the ",total_iter," iterations = ", round(current_time-start_time, 3) ) )
   }
-  
+  class(Synthetic_result) <- "synMicro_object"
   return(Synthetic_result)
   
-} # multipleImp <- function
+}
+
+print.synMicro_object <- function(x, ...){
+  ## print multipleSyn results
+  cat(paste0("Number of synthetic data sets: ", length(x$synt_data), "\n"))
+  cat(paste0("Data size: ", nrow(x$orig_data), "\n"))
+  cat("-------------------------------------------\n")
+
+  cat("First synthetic dataset:\n")
+  print(head(x$synt_data[[1]]))
+
+  cat("\nMixture component of the first synthetic dataset:\n")
+  cat(" $r_mat: ", head(x$comp_mat$r_mat[1,]), " ...\n")
+  cat(" $s_mat: ", head(x$comp_mat$s_mat[1,]), " ...\n")
+  cat(" $k_mat: ", head(x$comp_mat$k_mat[1,]), " ...\n")
+}
 
 .Beta_cube_fn = function(data_obj, model_obj){
   
@@ -182,3 +200,57 @@ multipleSyn <- function(data_obj, model_obj, n_burnin, m, interval_btw_Syn, show
   
 } # Beta_cube_orig_scale
 
+plot.synMicro_object <- function(x, vars, ...){
+  ### Check input objects ####
+  if(is.numeric(vars)) vars <- names(x$orig_data)[vars] ## index -> variable names
+  if(!all(vars %in% names(x$orig_data))) stop("invalid variable names") ## variable name error
+  
+  var_y <- names(x$orig_data)[sapply(x$orig_data, class)=="numeric"]
+  var_x <- names(x$orig_data)[sapply(x$orig_data, class)=="factor"]
+  
+  y_test <- vars %in% var_y
+  x_test <- vars %in% var_x
+  
+  if(all(any(y_test),any(x_test))) stop("Only one can be selected between categorical and continuous")
+  
+  ## continuous-type ####
+  if(any(y_test)){
+    if(sum(y_test)==1){   ## box-plot: one variable
+      synth_data <- data.frame(sapply(x$synt_data, function(s) s[vars]))
+      
+      for(m_rep in 1:length(x$synt_data)){
+        readline(prompt="Press [enter] to continue...")
+        plot_data <- data.frame(Original=x$orig_data[,vars], Synthetic = synth_data[,m_rep])
+        boxplot(plot_data, main=paste0(vars, ": Synthetic ", m_rep), col=c("grey", "royalblue"), lwd=2, ylim = range(x$orig_data[,vars],synth_data))
+      }
+      
+    }else{  ## scatter plot: more than 2
+      
+      var_list <- apply(combn(vars, 2), MARGIN=2, function(vvv) paste0(vvv, collapse = " ~ "))
+      
+      for(var_rep in 1:length(var_list)){
+        for(m_rep in 1:length(x$synt_data)){
+          readline(prompt="Press [enter] to continue...")
+          plot(formula(var_list[var_rep]), data=x$orig_data, pch=16, col="grey", main=paste0("Synthetic ", m_rep))
+          points(formula(var_list[var_rep]), data=x$synt_data[[m_rep]], col="royalblue")
+          legend("topright", c("Original", "Synthetic"), pch=c(16, 1), col = c("grey", "royalblue"))
+        }
+      }
+    }
+  }
+  
+  ## categorical-type ####
+  if(any(x_test)){
+    for(var_rep in vars){
+      synth_data <- sapply(x$synt_data, function(s) table(s[,var_rep]))
+      
+      for(m_rep in 1:length(x$synt_data)){
+        readline(prompt="Press [enter] to continue...")
+        barplot(t(cbind(table(x$orig_data[,var_rep]), synth_data[,m_rep])), main=paste0(var_rep, ": Synthetic ", m_rep),
+                beside = TRUE, col = c("grey", "royalblue"), ylim = c(0, ceiling(max(synth_data, table(x$orig_data[,var_rep]))*1.3)),
+                legend.text = c("Original", "Synthetic"),
+                args.legend = list(bty="n"))
+      }
+    }
+  }
+}
