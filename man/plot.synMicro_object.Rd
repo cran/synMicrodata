@@ -8,11 +8,12 @@ The \code{plot} method for \code{synMicro_object} object.
 This method compares synthetic datasets with original input data.
 }
 \usage{
-\method{plot}{synMicro_object}(x, vars, \dots)
+\method{plot}{synMicro_object}(x, vars, plot_num = NULL, \dots)
 }
 \arguments{
   \item{x}{ \code{synMicro_object} object. }
   \item{vars}{ vector of names or indices of the variables to compare. }
+  \item{plot_num}{ if \code{plot_num} is a number, returns a plot of the corresponding synthetic datset.}
   \item{...}{ other parameters to be passed through to plotting functions. }
 }
 \details{
@@ -23,6 +24,8 @@ The type of graph produced is contingent upon the number of categories in select
   \item Putting more than two continuous variables produces \emph{pairwise scatter plots} for each pair of selected variables.
   \item Putting categorical variables produce \emph{bar plot} of each selected variable.
   }
+  
+If \code{plot_num=NULL}, the function output plots for all generated synthetic datasets.
 }
 
 \seealso{
@@ -53,5 +56,9 @@ plot(res_obj, vars = c(1,2)) ## or variable index
 ### bar plot
 plot(res_obj, vars = "Species")
 
+
+### specify the synthetic dattaset
+par(mfrow=c(1,1))
+plot(res_obj, vars = "Petal.Length", plot_num=1)
 
 }

@@ -1,8 +1,8 @@
 Package: synMicrodata
 Type: Package
 Title: Synthetic Microdata Generator
-Version: 2.0.0
-Date: 2024-04-06
+Version: 2.1.0
+Date: 2024-11-21
 Authors@R: c(person("Hang J.", "Kim", role = c("aut", "cre"),
                     email = "hangkim0@gmail.com"),
              person("Juhee", "Lee", role = "aut"),
@@ -15,10 +15,10 @@ Imports: methods, stats, graphics, utils, Rcpp
 LinkingTo: Rcpp, RcppArmadillo
 RcppModules: IO_module
 NeedsCompilation: yes
-Packaged: 2024-04-06 01:23:09 UTC; user
+Packaged: 2024-11-21 04:41:42 UTC; user
 Author: Hang J. Kim [aut, cre],
   Juhee Lee [aut],
   Young-Min Kim [aut],
   Jared Murray [aut]
 Repository: CRAN
-Date/Publication: 2024-04-07 08:00:02 UTC
+Date/Publication: 2024-11-21 05:40:02 UTC

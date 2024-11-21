@@ -9,7 +9,7 @@
 This class implements a joint modeling approach to generate synthetic microdata with continuous and categorical variables with possibly missing values. The method builds on the work of Murray and Reiter (2016)
 }
 \section{Extends}{
-Class \code{"\linkS4class{C++Object}"}, directly.
+Class \code{"C++Object"}, directly.
 }
 
 \keyword{classes}
@@ -35,6 +35,10 @@ Murray, J. S. and Reiter, J. P. (2016).
   Multiple imputation of missing categorical and continuous values via 
   Bayesian mixture models with local dependence. 
   \emph{Journal of the American Statistical Association}, \bold{111(516)}, pp.1466-1479.
+}
+
+\seealso{
+  \code{\link[Rcpp]{Rcpp}}, \code{\link[Rcpp]{C++Object-class}}
 }
 
 \examples{

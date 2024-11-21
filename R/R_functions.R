@@ -169,7 +169,7 @@ multipleSyn <- function(data_obj, model_obj, n_burnin, m, interval_btw_Syn, show
 print.synMicro_object <- function(x, ...){
   ## print multipleSyn results
   cat(paste0("Number of synthetic data sets: ", length(x$synt_data), "\n"))
-  cat(paste0("Data size: ", nrow(x$orig_data), "\n"))
+  cat(paste0("Data size: ", nrow(x$orig_data), " obs. of ", ncol(x$orig_data), " variables \n"))
   cat("-------------------------------------------\n")
 
   cat("First synthetic dataset:\n")
@@ -179,6 +179,70 @@ print.synMicro_object <- function(x, ...){
   cat(" $r_mat: ", head(x$comp_mat$r_mat[1,]), " ...\n")
   cat(" $s_mat: ", head(x$comp_mat$s_mat[1,]), " ...\n")
   cat(" $k_mat: ", head(x$comp_mat$k_mat[1,]), " ...\n")
+}
+
+summary.synMicro_object <- function(object, max_print = 4, ...){
+  ## print multipleSyn results
+  is_Y <- sapply(object$orig_data, is.numeric)
+  is_X <- !is_Y
+  
+  n_print <- ifelse(length(object$synt_data)>max_print, max_print, length(object$synt_data))
+  
+  results <- list() ## final output
+  
+  results$continuous <- list()
+  
+  ## continuous
+  for(i in which(is_Y)){
+    orig <- summary(object$orig_data[,i])[1:6]
+    synt <- sapply(object$synt_data, function(s) summary(s[,i]))
+    qbar <- rowMeans(synt)
+    bm <- apply(synt, MARGIN=1, sd)
+    
+    # res_tmp  <- data.frame(cbind(orig, qbar, bm, synt[,1:n_print]))
+    # names(res_tmp) <- c("Orig.", "Q_bar", "B_m", paste0("Synt.", 1:n_print))
+    res_tmp  <- data.frame(cbind(orig, qbar, bm, synt))
+    names(res_tmp) <- c("Orig.", "Q_bar", "B_m", paste0("Synt.", 1:ncol(synt)))
+    
+    results$continuous[[names(object$orig_data)[i]]] <- res_tmp
+  }
+  
+  ## categorical
+  results$categorical <- list()
+  for(i in which(is_X)){
+    orig <- table(object$orig_data[,i])
+    synt <- sapply(object$synt_data, function(s) table(s[,i]))
+    
+    qbar <- rowMeans(synt)
+    
+    res_tmp <- data.frame(cbind(orig, qbar, synt))
+    names(res_tmp) <- c("Orig.", "Q_bar", paste0("Synt.", 1:ncol(synt)))
+    
+    results$categorical[[names(object$orig_data)[i]]] <- res_tmp
+  }
+
+  ## print
+  cat("Number of synthetic data sets:", length(object$synt_data), "\n")
+  cat("Data size:", nrow(object$orig_data), "obs. of", ncol(object$orig_data), "variables \n")
+  cat("-------------------------------------------\n")
+  cat("Continuous:", names(object$orig_data)[is_Y], "\n")
+  print(lapply(results$continuous, function(sss) sss[,1:(3+n_print)]))
+  cat("-------------------------------------------\n")
+  cat("Categorical:", names(object$orig_data)[is_X], "\n")
+  print(lapply(results$categorical, function(sss) sss[,1:(2+n_print)]))
+}
+
+
+print.readData_passed <- function(x, ...){
+  ## print readData results
+  cat("Original data: ", x$n_sample, "obs. of", (x$p_Y+x$p_X), "variables \n")
+  print(head(x$orig_data))
+  cat("-------------------------------------------\n")
+  cat("Number of missing values:\n")
+  cat(" Continiuous: \n ")
+  print(colSums(x$NA_Y_mat))
+  cat("\n Categorical: \n ")
+  print(colSums(x$NA_X_mat))
 }
 
 .Beta_cube_fn = function(data_obj, model_obj){
@@ -200,7 +264,7 @@ print.synMicro_object <- function(x, ...){
   
 } # Beta_cube_orig_scale
 
-plot.synMicro_object <- function(x, vars, ...){
+plot.synMicro_object <- function(x, vars, plot_num=NULL, ...){
   ### Check input objects ####
   if(is.numeric(vars)) vars <- names(x$orig_data)[vars] ## index -> variable names
   if(!all(vars %in% names(x$orig_data))) stop("invalid variable names") ## variable name error
@@ -213,43 +277,76 @@ plot.synMicro_object <- function(x, vars, ...){
   
   if(all(any(y_test),any(x_test))) stop("Only one can be selected between categorical and continuous")
   
-  ## continuous-type ####
-  if(any(y_test)){
-    if(sum(y_test)==1){   ## box-plot: one variable
-      synth_data <- data.frame(sapply(x$synt_data, function(s) s[vars]))
-      
-      for(m_rep in 1:length(x$synt_data)){
-        readline(prompt="Press [enter] to continue...")
-        plot_data <- data.frame(Original=x$orig_data[,vars], Synthetic = synth_data[,m_rep])
-        boxplot(plot_data, main=paste0(vars, ": Synthetic ", m_rep), col=c("grey", "royalblue"), lwd=2, ylim = range(x$orig_data[,vars],synth_data))
+  if(!is.null(plot_num)){ ## plot num: number of synthetic data...
+    if(!(plot_num %in% 1:length(x$synt_data))) stop("invalid synthetic data number")
+    
+    ## continuous-type
+    if(any(y_test)){
+      switch(sum(y_test),
+             '1'={
+               plot_data <- data.frame(Original=x$orig_data[,vars], Synthetic = x$synt_data[[plot_num]][,vars])
+               boxplot(plot_data, main=paste0(vars, ": Synthetic ", plot_num), col=c("grey", "royalblue"), lwd=2, ylim = range(plot_data))
+             },
+             '2'={
+               plot(formula(paste0(vars, collapse="~")), data=x$orig_data, pch=16, col="grey", main=paste0("Synthetic ", plot_num))
+               points(formula(paste0(vars, collapse="~")), data=x$synt_data[[plot_num]], col="royalblue")
+               legend("topright", c("Original", "Synthetic"), pch=c(16, 1), col = c("grey", "royalblue"))
+             },
+             {stop("only one plot can be output")})
+    }
+    
+    if(any(x_test)){
+      if(sum(x_test)==1){
+        plot_data <- t(cbind(table(x$orig_data[,vars]),table(x$synt_data[[plot_num]][,vars])))
+        barplot(plot_data,
+                main=paste0(vars, ": Synthetic ", plot_num),
+                beside = TRUE, col = c("grey", "royalblue"), ylim = c(0, max(plot_data)*1.5),
+                legend.text = c("Original", "Synthetic"),
+                args.legend = list(bty="n"))
+      }else{
+        stop("only one plot can be output")
       }
-      
-    }else{  ## scatter plot: more than 2
-      
-      var_list <- apply(combn(vars, 2), MARGIN=2, function(vvv) paste0(vvv, collapse = " ~ "))
-      
-      for(var_rep in 1:length(var_list)){
+    }
+    
+  }else{
+    ## continuous-type ####
+    if(any(y_test)){
+      if(sum(y_test)==1){   ## box-plot: one variable
+        synth_data <- data.frame(sapply(x$synt_data, function(s) s[vars]))
+        
         for(m_rep in 1:length(x$synt_data)){
           readline(prompt="Press [enter] to continue...")
-          plot(formula(var_list[var_rep]), data=x$orig_data, pch=16, col="grey", main=paste0("Synthetic ", m_rep))
-          points(formula(var_list[var_rep]), data=x$synt_data[[m_rep]], col="royalblue")
-          legend("topright", c("Original", "Synthetic"), pch=c(16, 1), col = c("grey", "royalblue"))
+          plot_data <- data.frame(Original=x$orig_data[,vars], Synthetic = synth_data[,m_rep])
+          boxplot(plot_data, main=paste0(vars, ": Synthetic ", m_rep), col=c("grey", "royalblue"), lwd=2, ylim = range(x$orig_data[,vars],synth_data))
+        }
+        
+      }else{  ## scatter plot: more than 2
+        
+        var_list <- apply(combn(vars, 2), MARGIN=2, function(vvv) paste0(vvv, collapse = " ~ "))
+        
+        for(var_rep in 1:length(var_list)){
+          for(m_rep in 1:length(x$synt_data)){
+            readline(prompt="Press [enter] to continue...")
+            plot(formula(var_list[var_rep]), data=x$orig_data, pch=16, col="grey", main=paste0("Synthetic ", m_rep))
+            points(formula(var_list[var_rep]), data=x$synt_data[[m_rep]], col="royalblue")
+            legend("topright", c("Original", "Synthetic"), pch=c(16, 1), col = c("grey", "royalblue"))
+          }
         }
       }
     }
-  }
-  
-  ## categorical-type ####
-  if(any(x_test)){
-    for(var_rep in vars){
-      synth_data <- sapply(x$synt_data, function(s) table(s[,var_rep]))
-      
-      for(m_rep in 1:length(x$synt_data)){
-        readline(prompt="Press [enter] to continue...")
-        barplot(t(cbind(table(x$orig_data[,var_rep]), synth_data[,m_rep])), main=paste0(var_rep, ": Synthetic ", m_rep),
-                beside = TRUE, col = c("grey", "royalblue"), ylim = c(0, ceiling(max(synth_data, table(x$orig_data[,var_rep]))*1.3)),
-                legend.text = c("Original", "Synthetic"),
-                args.legend = list(bty="n"))
+    
+    ## categorical-type ####
+    if(any(x_test)){
+      for(var_rep in vars){
+        synth_data <- sapply(x$synt_data, function(s) table(s[,var_rep]))
+        
+        for(m_rep in 1:length(x$synt_data)){
+          readline(prompt="Press [enter] to continue...")
+          barplot(t(cbind(table(x$orig_data[,var_rep]), synth_data[,m_rep])), main=paste0(var_rep, ": Synthetic ", m_rep),
+                  beside = TRUE, col = c("grey", "royalblue"), ylim = c(0, ceiling(max(synth_data, table(x$orig_data[,var_rep]))*1.5)),
+                  legend.text = c("Original", "Synthetic"),
+                  args.legend = list(bty="n"))
+        }
       }
     }
   }

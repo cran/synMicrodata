@@ -1,5 +1,6 @@
 \name{readData}
 \alias{readData}
+\alias{print.readData_passed}
 \title{
   Read the original datasets
 }
@@ -8,6 +9,8 @@
 }
 \usage{
 readData(Y_input, X_input, RandomSeed = 99)
+
+\method{print}{readData_passed}(x, \dots)
 }
 \arguments{
   \item{Y_input}{
@@ -20,6 +23,12 @@ readData(Y_input, X_input, RandomSeed = 99)
 }
   \item{RandomSeed}{
   random seed number.
+}
+\item{x}{
+object of class \code{readData_passed}; a result of a call to \code{readData()}.
+}
+\item{...}{
+further arguments passed to or from other methods.
 }
 }
 \value{
